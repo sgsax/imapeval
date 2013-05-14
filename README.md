@@ -18,7 +18,9 @@ Required non-standard libraries (install these and any dependencies):
         libemail-simple-perl
         libio-prompt-perl
 
-    Usage: imapeval [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
+Usage:
+    imapeval [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
+
     Connection credentials will be prompted for if not provided on the command line
         --host, -i          IMAP hostname to connect to
         --user, -u          username for connection credentials
