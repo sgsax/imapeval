@@ -130,7 +130,7 @@ for $box (@boxes) {
 	if ($num>0){
 		$list = $imap->list;
 		# tally sizes of each message in this folder
-		for $msgid (keys $list) {
+		for $msgid (keys %{$list}) {
 			$sz +=  $list->{$msgid};
 		}
 	} else {
