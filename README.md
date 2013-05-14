@@ -1,0 +1,4 @@
+imapeval
+========
+
+IMAP folder evaluator
