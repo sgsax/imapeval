@@ -23,7 +23,7 @@ You'll need these non-standard libraries (install these and any dependencies):
  * perl-Email-Simple
 
 ## Usage
-'''
+```
 Usage: imapeval [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
 
     Connection credentials will be prompted for if not provided on the command line
@@ -48,7 +48,7 @@ Usage: imapeval [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
 
         --verbose, -v       be a little more verbose
         --help, -h          display this help
-'''
+```
 
 ## Author:
 Seth D. Galitzer <sethgali@gmail.com>
