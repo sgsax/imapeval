@@ -1,0 +1,238 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Net::IMAP::Simple;
+use IO::Prompt;
+use Getopt::Long;
+
+# vars for CLI options
+my $host;
+my $user="";
+my $pass="";
+my $sfold=1;
+my $scount=0;
+my $ssize=0;
+my $asc=1;
+my $desc=0;
+my $B=0;
+my $kb=0;
+my $mb=1;
+my $gb=0;
+my $verbose=0;
+my $help=0;
+
+# vars used for calculating and labelling size
+my $factor;
+my $label="MB";
+
+# vars for counters and collections
+my $box;
+my $sz;
+my $i;
+my $num;
+my $list;
+my $msgid;
+my $tsz=0;
+my $tnum=0;
+my $data={};
+
+GetOptions (
+    'host|i=s'     => \$host,
+	'user|u=s'     => \$user,
+	'password|p=s' => \$pass,
+	'sortfolder|f' => \$sfold,
+	'sortcount|c'  => \$scount,
+	'sortsize|z'   => \$ssize,
+	'ascending|a'  => \$asc,
+	'descending|d' => \$desc,
+	'bytes|b' 	   => \$B,
+	'kilobytes|k'  => \$kb,
+	'megabytes|m'  => \$mb,
+	'gigabytes|g'  => \$gb,
+	'verbose|v'    => \$verbose,
+	'help|h'	   => \$help
+);
+
+if ($help) {
+	usage();
+	exit(0);
+}
+
+# should only allow one byte formatter, save factor and label for use later
+if ($B) { 
+	$factor = 0;
+	$label="B";
+	$kb=0;
+	$mb=0;
+	$gb=0;
+} elsif ($kb) {
+	$factor = 1;
+	$label="KB";
+	$B=0;
+	$mb=0;
+	$gb=0;
+} elsif ($gb) {
+	$factor = 3;
+	$label="GB";
+	$B=0;
+	$kb=0;
+	$mb=0;
+} else {
+	$factor = 2;
+	$B=0;
+	$kb=0;
+	$gb=0;
+}
+
+# should only allow either ascending or descending sort order
+if ($desc) {
+	$asc=0;
+} else {
+	$desc=0;
+}
+
+# should only allow one sort order
+if ($scount) {
+	$sfold=0;
+	$ssize=0;
+} elsif ($ssize) {
+	$scount=0;
+	$sfold=0;
+} else {
+	$scount=0;
+	$ssize=0;
+}
+
+# get connection info from user if not provided on invocation
+if (! $host) { $host = prompt("IMAP Server: "); }
+if (! $user) { $user = prompt("Username: "); }
+if (! $pass) { $pass = prompt("Password: ", -e => "*"); }
+
+# Create the connection to the imap host
+my $imap = Net::IMAP::Simple->new($host, use_ssl => 1      ) ||
+   die "Unable to connect to IMAP: $Net::IMAP::Simple::errstr\n";
+# Log on using provided credentials
+if(!$imap->login($user,$pass)){
+	print STDERR "Login failed: " . $imap->errstr . "\n";
+	exit(2);
+}
+
+# Collect count and byte size data for all folders starting at the top level
+my @boxes   = $imap->mailboxes;
+for $box (@boxes) {
+	if ($verbose) { print "Getting data for $box...\n"; }
+	# reset some counters
+	$sz = 0;
+	$i = 0;
+	# get message count for this folder
+	$num = $imap->select($box);
+	if ($num>0){
+		$list = $imap->list;
+		# tally sizes of each message in this folder
+		for $msgid (keys $list) {
+			$sz +=  $list->{$msgid};
+		}
+	} else {
+		$num=0;
+	}
+	# increment total counters
+	$tsz += $sz;
+	$tnum += $num;
+	# store collected data
+	$data->{$box} = { count => $num, size => $sz };
+}
+
+# print header
+printf "%-30s %-10s %-10s\n", "Folder", "Num Msgs", "Size ($label)";
+print "=" x 60;
+print "\n";
+
+if ($sfold) {
+	# case-insensitive sort on folder name
+	if ($desc) {
+		for $box (reverse sort {lc($b) cmp lc($a)} keys %$data) { 
+			print_data($data, $box, $factor);
+		}
+	} else {
+		for $box (sort {lc($a) cmp lc($b)} keys %$data) {
+			print_data($data, $box, $factor);
+		}
+	}
+} elsif ($scount) {
+	# sort on message count
+	if ($desc) {
+		for $box ( 
+				sort { $data->{$b}->{count} <=> $data->{$a}->{count} } keys %$data
+			) {
+			print_data($data, $box, $factor);
+		}
+	} else {
+		for $box ( 
+				sort { $data->{$a}->{count} <=> $data->{$b}->{count} } keys %$data
+			) {
+			print_data($data, $box, $factor);
+		}
+	}
+} else {
+	# sort on folder size
+	if ($desc) {
+		for $box ( 
+				sort { $data->{$b}->{size} <=> $data->{$a}->{size} } keys %$data
+			) {
+			print_data($data, $box, $factor);
+		}
+	} else {
+		for $box ( 
+				sort { $data->{$a}->{size} <=> $data->{$b}->{size} } keys %$data
+			) {
+			print_data($data, $box, $factor);
+		}
+	}
+}
+	
+# print footer
+print "-" x 60;
+print "\n";
+printf "%-30s %-10s %.2f\n", "TOTAL", $tnum, ($tsz/(1024**$factor));
+
+# close connection
+$imap->quit;
+
+sub print_data {
+	# print data for specified folder using specified byte factor
+	my $data = shift;
+	my $box = shift;
+	my $fct = shift;
+	
+	my $msz = ($data->{$box}->{size}/(1024**$fct));
+	printf "%-30s %-10s %.2f\n", $box, $data->{$box}->{count}, $msz;
+}
+
+sub usage {
+	print << "EOT"
+Usage: $0 [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
+Connection credentials will be prompted for if not provided on the command line
+	--host, -i          IMAP hostname to connect to
+	--user, -u          username for connection credentials
+	--password, -p      password for connection credentials
+
+Sort selection options are mutually exclusive
+	--sortfolder, -f    sort by folder name (default)
+	--sortcount, -c     sort by count of messages in folder
+	--sortsize, -z      sort by size of folder
+
+Sort direction options are mutually exclusive
+	--ascending, -a     sort ascending (default)
+	--descending, -d    sort descending
+
+Size formatting options are mutually exclusive
+	--bytes, -b         display size in bytes
+	--kilobytes, -k     display size in kilobytes
+	--megabytes, -m     display size in megabytes (default)
+	--gigabytes, -g     display size in gigabytes
+
+	--verbose, -v       be a little more verbose
+	--help, -h          display this help
+EOT
+}
