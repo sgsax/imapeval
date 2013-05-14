@@ -12,20 +12,18 @@ You'll need these non-standard libraries (install these and any dependencies):
  * Net::IMAP::Simple
  * Email::Simple
  * IO::Prompt
-
 * Ubuntu/Debian packages:
  * libnet-imap-simple-perl
  * libemail-simple-perl
  * libio-prompt-perl
-
 * RedHat (et al) packages:
  * perl-Net-IMAP-Simple
  * perl-Email-Simple
+ * _there is no package for IO::Prompt in the standard repositories_
 
 ## Usage
 ```
 Usage: imapeval [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
-
     Connection credentials will be prompted for if not provided on the command line
         --host, -i          IMAP hostname to connect to
         --user, -u          username for connection credentials
@@ -50,5 +48,5 @@ Usage: imapeval [-h] [-u] [-p] [-f|-c|-z] [-a|-d] [-b|-k|-m|-g] [-v] [-h]
         --help, -h          display this help
 ```
 
-## Author:
+## Author
 Seth D. Galitzer <sethgali@gmail.com>
